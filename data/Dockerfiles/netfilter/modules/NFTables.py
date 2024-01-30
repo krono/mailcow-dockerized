@@ -266,6 +266,17 @@ class NFTables:
 
     return self.nft_exec_dict(delete_command)
 
+  def delete_filter_rule(self, _family:str, _chain: str, _handle:str):
+    delete_command = self.get_base_dict()
+    _rule_opts = {'family': _family,
+                  'table': 'filter',
+                  'chain': _chain,
+                  'handle': _handle  }
+    _delete = {'delete': {'rule': _rule_opts} }
+    delete_command["nftables"].append(_delete)
+
+    return self.nft_exec_dict(delete_command)
+
   def snat_rule(self, _family: str, snat_target: str, source_address: str):
     chain_name = self.nft_chain_names[_family]['nat']['postrouting']
 
@@ -493,3 +504,80 @@ class NFTables:
         position+=1
 
     return position if rule_found else False
+
+  def create_docker_user_rule(self, _interface:str, _dports:list):
+    family = "ip"
+    table = "filter"
+    chain_name = "DOCKER-USER"
+    json_command = self.get_base_dict()
+
+    handles = self.get_rules_handle(family, table, chain_name)
+    for handle in handles:
+      self.delete_filter_rule(family, chain_name, handle)
+
+    rule = { "insert": { "rule": {
+      "family": family,
+      "table": table,
+      "chain": chain_name,
+      "comment": "mailcow",
+      "expr": [
+        {
+          "match": {
+            "op": "!=",
+            "left": {
+              "meta": {
+                "key": "iifname"
+              }
+            },
+            "right": _interface
+          }
+        },
+        {
+          "match": {
+            "op": "==",
+            "left": {
+              "meta": {
+                "key": "oifname"
+              }
+            },
+            "right": _interface
+          }
+        },
+        {
+          "match": {
+            "op": "==",
+            "left": {
+              "payload": {
+                "protocol": "tcp",
+                "field": "dport"
+              }
+            },
+            "right": {
+              "set": _dports
+            }
+          }
+        },
+        {
+          "match": {
+            "op": "in",
+            "left": {
+              "ct": {
+                "key": "state"
+              }
+            },
+            "right": "new"
+          }
+        },
+        {
+          "drop": None
+        }
+      ]
+    }}}
+
+    json_command["nftables"].append(rule)
+    success = self.nft_exec_dict(json_command)
+    if success == False:
+      self.logger.logCrit(f"Error adding DOCKER-USER isolation")
+      return False
+
+    return True

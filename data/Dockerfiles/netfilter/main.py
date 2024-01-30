@@ -412,6 +412,8 @@ if __name__ == '__main__':
   refreshF2boptions()
   # In case a previous session was killed without cleanup
   clear()
+  logger.logInfo("Setting DOCKER-USER isolation")
+  tables.create_docker_user_rule("br-mailcow", [3306, 6379, 8983, 12345])
   # Reinit MAILCOW chain
   # Is called before threads start, no locking
   logger.logInfo("Initializing mailcow netfilter chain")

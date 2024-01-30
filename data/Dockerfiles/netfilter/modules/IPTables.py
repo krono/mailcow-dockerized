@@ -211,3 +211,25 @@ class IPTables:
     target = rule.create_target("SNAT")
     target.to_source = snat_target
     return rule
+
+  def create_docker_user_rule(self, _interface:str, _dports:list):
+    try:
+      chain = iptc.Chain(iptc.Table(iptc.Table.FILTER), 'DOCKER-USER')
+      rule = iptc.Rule()
+      rule.in_interface = f'! {_interface}'
+      rule.out_interface = _interface
+      rule.protocol = 'tcp'
+      rule.create_target("DROP")
+      match = rule.create_match("multiport")
+      match.dports = ','.join(map(str, _dports))
+      match = rule.create_match('conntrack')
+      match.ctstate = 'NEW'
+
+      if rule in chain.rules:
+        return False
+      chain.insert_rule(rule, position=0)
+
+      return True
+    except Exception as e:
+      self.logger.logCrit(f"Error adding DOCKER-USER isolation: {e}")
+      return False
