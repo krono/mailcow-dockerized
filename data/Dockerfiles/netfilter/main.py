@@ -28,6 +28,7 @@ bans = {}
 quit_now = False
 exit_code = 0
 lock = Lock()
+r = None
 
 
 def refreshF2boptions():
@@ -216,9 +217,10 @@ def clear():
   with lock:
     tables.clearIPv4Table()
     tables.clearIPv6Table()
-    r.delete('F2B_ACTIVE_BANS')
-    r.delete('F2B_PERM_BANS')
-    pubsub.unsubscribe()
+    if r:
+      r.delete('F2B_ACTIVE_BANS')
+      r.delete('F2B_PERM_BANS')
+      pubsub.unsubscribe()
 
 def watch():
   logger.logInfo('Watching Redis channel F2B_CHANNEL')
@@ -420,7 +422,10 @@ if __name__ == '__main__':
   # rename fail2ban to netfilter
   if r.exists('F2B_LOG'):
     r.rename('F2B_LOG', 'NETFILTER_LOG')
-
+  # clear bans in redis
+  r.delete('F2B_ACTIVE_BANS')
+  r.delete('F2B_PERM_BANS')
+  
   refreshF2boptions()
 
   watch_thread = Thread(target=watch)
