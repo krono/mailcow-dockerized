@@ -392,7 +392,7 @@ class NFTables:
           break
     return chain_handle
 
-  def get_rules_handle(self, _family: str, _table: str, chain_name: str):
+  def get_rules_handle(self, _family: str, _table: str, chain_name: str, _comment_filter = "mailcow"):
     rule_handle = []
     # Command: 'nft list chain {family} {table} {chain_name}'
     _chain_opts = {'family': _family, 'table': _table, 'name': chain_name}
@@ -408,7 +408,7 @@ class NFTables:
 
         rule = _object["rule"]
         if rule["family"] == _family and rule["table"] == _table and rule["chain"] == chain_name:
-          if rule.get("comment") and rule["comment"] == "mailcow":
+          if rule.get("comment") and rule["comment"] == _comment_filter:
             rule_handle.append(rule["handle"])
     return rule_handle
 
@@ -508,10 +508,11 @@ class NFTables:
   def create_docker_user_rule(self, _interface:str, _dports:list):
     family = "ip"
     table = "filter"
-    chain_name = "DOCKER-USER"
+    chain_name = "MAILCOW"
+    comment_filter = "mailcow isolation"
     json_command = self.get_base_dict()
 
-    handles = self.get_rules_handle(family, table, chain_name)
+    handles = self.get_rules_handle(family, table, chain_name, comment_filter)
     for handle in handles:
       self.delete_filter_rule(family, chain_name, handle)
 
@@ -519,7 +520,7 @@ class NFTables:
       "family": family,
       "table": table,
       "chain": chain_name,
-      "comment": "mailcow",
+      "comment": comment_filter,
       "expr": [
         {
           "match": {
@@ -577,7 +578,7 @@ class NFTables:
     json_command["nftables"].append(rule)
     success = self.nft_exec_dict(json_command)
     if success == False:
-      self.logger.logCrit(f"Error adding DOCKER-USER isolation")
+      self.logger.logCrit(f"Error adding MAILCOW isolation")
       return False
 
     return True

@@ -214,7 +214,7 @@ class IPTables:
 
   def create_docker_user_rule(self, _interface:str, _dports:list):
     try:
-      chain = iptc.Chain(iptc.Table(iptc.Table.FILTER), 'DOCKER-USER')
+      chain = iptc.Chain(iptc.Table(iptc.Table.FILTER), 'MAILCOW')
       rule = iptc.Rule()
       rule.in_interface = f'! {_interface}'
       rule.out_interface = _interface
@@ -231,5 +231,5 @@ class IPTables:
 
       return True
     except Exception as e:
-      self.logger.logCrit(f"Error adding DOCKER-USER isolation: {e}")
+      self.logger.logCrit(f"Error adding MAILCOW isolation: {e}")
       return False
