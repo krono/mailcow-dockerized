@@ -437,12 +437,6 @@ services:
     netfilter-mailcow:
       image: mailcow/netfilter:1.55
       stop_grace_period: 30s
-      depends_on:
-        - dovecot-mailcow
-        - postfix-mailcow
-        - sogo-mailcow
-        - php-fpm-mailcow
-        - redis-mailcow
       restart: always
       privileged: true
       environment:

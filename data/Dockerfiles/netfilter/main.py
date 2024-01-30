@@ -21,28 +21,6 @@ from modules.IPTables import IPTables
 from modules.NFTables import NFTables
 
 
-# connect to redis
-while True:
-  try:
-    redis_slaveof_ip = os.getenv('REDIS_SLAVEOF_IP', '')
-    redis_slaveof_port = os.getenv('REDIS_SLAVEOF_PORT', '')
-    if "".__eq__(redis_slaveof_ip):
-      r = redis.StrictRedis(host=os.getenv('IPV4_NETWORK', '172.22.1') + '.249', decode_responses=True, port=6379, db=0)
-    else:
-      r = redis.StrictRedis(host=redis_slaveof_ip, decode_responses=True, port=redis_slaveof_port, db=0)
-    r.ping()
-  except Exception as ex:
-    print('%s - trying again in 3 seconds'  % (ex))
-    time.sleep(3)
-  else:
-    break
-pubsub = r.pubsub()
-
-# rename fail2ban to netfilter
-if r.exists('F2B_LOG'):
-  r.rename('F2B_LOG', 'NETFILTER_LOG')
-
-
 # globals
 WHITELIST = []
 BLACKLIST= []
@@ -50,18 +28,6 @@ bans = {}
 quit_now = False
 exit_code = 0
 lock = Lock()
-
-
-# init Logger
-logger = Logger(r)
-# init backend
-backend = sys.argv[1]
-if backend == "nftables":
-  logger.logInfo('Using NFTables backend')
-  tables = NFTables("MAILCOW", logger)
-else:
-  logger.logInfo('Using IPTables backend')
-  tables = IPTables("MAILCOW", logger)
 
 
 def refreshF2boptions():
@@ -409,16 +375,53 @@ def quit(signum, frame):
 
 
 if __name__ == '__main__':
-  refreshF2boptions()
+  # init Logger
+  logger = Logger(None)
+
+  # init backend
+  backend = sys.argv[1]
+  if backend == "nftables":
+    logger.logInfo('Using NFTables backend')
+    tables = NFTables("MAILCOW", logger)
+  else:
+    logger.logInfo('Using IPTables backend')
+    tables = IPTables("MAILCOW", logger)
+
   # In case a previous session was killed without cleanup
   clear()
-  logger.logInfo("Setting DOCKER-USER isolation")
-  tables.create_docker_user_rule("br-mailcow", [3306, 6379, 8983, 12345])
+
   # Reinit MAILCOW chain
   # Is called before threads start, no locking
   logger.logInfo("Initializing mailcow netfilter chain")
   tables.initChainIPv4()
   tables.initChainIPv6()
+
+  logger.logInfo("Setting MAILCOW isolation")
+  tables.create_docker_user_rule("br-mailcow", [3306, 6379, 8983, 12345])
+
+  # connect to redis
+  while True:
+    try:
+      redis_slaveof_ip = os.getenv('REDIS_SLAVEOF_IP', '')
+      redis_slaveof_port = os.getenv('REDIS_SLAVEOF_PORT', '')
+      if "".__eq__(redis_slaveof_ip):
+        r = redis.StrictRedis(host=os.getenv('IPV4_NETWORK', '172.22.1') + '.249', decode_responses=True, port=6379, db=0)
+      else:
+        r = redis.StrictRedis(host=redis_slaveof_ip, decode_responses=True, port=redis_slaveof_port, db=0)
+      r.ping()
+    except Exception as ex:
+      print('%s - trying again in 3 seconds'  % (ex))
+      time.sleep(3)
+    else:
+      break
+  pubsub = r.pubsub()
+  Logger.r = r
+
+  # rename fail2ban to netfilter
+  if r.exists('F2B_LOG'):
+    r.rename('F2B_LOG', 'NETFILTER_LOG')
+
+  refreshF2boptions()
 
   watch_thread = Thread(target=watch)
   watch_thread.daemon = True
