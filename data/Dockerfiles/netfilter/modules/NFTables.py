@@ -505,7 +505,7 @@ class NFTables:
 
     return position if rule_found else False
 
-  def create_docker_user_rule(self, _interface:str):
+  def create_docker_user_rule(self, _interface:str, _dports:list):
     family = "ip"
     table = "filter"
     chain_name = "MAILCOW"
@@ -537,6 +537,20 @@ class NFTables:
             }
           },
           "right": _interface
+        }
+      },
+      {
+        "match": {
+          "op": "==",
+          "left": {
+            "payload": {
+              "protocol": "tcp",
+              "field": "dport"
+            }
+          },
+          "right": {
+            "set": _dports
+          }
         }
       },
       {

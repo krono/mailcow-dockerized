@@ -219,6 +219,8 @@ class IPTables:
       rule.in_interface = f'! {_interface}'
       rule.out_interface = _interface
       rule.create_target("DROP")
+      match = rule.create_match("multiport")
+      match.dports = ','.join(map(str, _dports))
 
       if rule in chain.rules:
         return False
