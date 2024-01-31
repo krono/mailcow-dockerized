@@ -399,7 +399,7 @@ if __name__ == '__main__':
   tables.initChainIPv6()
 
   logger.logInfo("Setting MAILCOW isolation")
-  tables.create_docker_user_rule("br-mailcow", [3306, 6379, 8983, 12345])
+  tables.create_docker_user_rule("br-mailcow")
 
   # connect to redis
   while True:
@@ -425,7 +425,7 @@ if __name__ == '__main__':
   # clear bans in redis
   r.delete('F2B_ACTIVE_BANS')
   r.delete('F2B_PERM_BANS')
-  
+
   refreshF2boptions()
 
   watch_thread = Thread(target=watch)

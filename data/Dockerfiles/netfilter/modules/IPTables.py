@@ -218,12 +218,7 @@ class IPTables:
       rule = iptc.Rule()
       rule.in_interface = f'! {_interface}'
       rule.out_interface = _interface
-      rule.protocol = 'tcp'
       rule.create_target("DROP")
-      match = rule.create_match("multiport")
-      match.dports = ','.join(map(str, _dports))
-      match = rule.create_match('conntrack')
-      match.ctstate = 'NEW'
 
       if rule in chain.rules:
         return False

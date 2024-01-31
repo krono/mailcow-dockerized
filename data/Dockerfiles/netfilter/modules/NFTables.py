@@ -505,7 +505,7 @@ class NFTables:
 
     return position if rule_found else False
 
-  def create_docker_user_rule(self, _interface:str, _dports:list):
+  def create_docker_user_rule(self, _interface:str):
     family = "ip"
     table = "filter"
     chain_name = "MAILCOW"
@@ -516,63 +516,46 @@ class NFTables:
     for handle in handles:
       self.delete_filter_rule(family, chain_name, handle)
 
+    _match_dict = [
+      {
+        "match": {
+          "op": "!=",
+          "left": {
+            "meta": {
+              "key": "iifname"
+            }
+          },
+          "right": _interface
+        }
+      },
+      {
+        "match": {
+          "op": "==",
+          "left": {
+            "meta": {
+              "key": "oifname"
+            }
+          },
+          "right": _interface
+        }
+      },
+      {
+        "counter": {
+          "packets": 0,
+          "bytes": 0
+        }
+      },
+      {
+        "drop": None
+      }
+    ]
+
     rule = { "insert": { "rule": {
       "family": family,
       "table": table,
       "chain": chain_name,
       "comment": comment_filter,
-      "expr": [
-        {
-          "match": {
-            "op": "!=",
-            "left": {
-              "meta": {
-                "key": "iifname"
-              }
-            },
-            "right": _interface
-          }
-        },
-        {
-          "match": {
-            "op": "==",
-            "left": {
-              "meta": {
-                "key": "oifname"
-              }
-            },
-            "right": _interface
-          }
-        },
-        {
-          "match": {
-            "op": "==",
-            "left": {
-              "payload": {
-                "protocol": "tcp",
-                "field": "dport"
-              }
-            },
-            "right": {
-              "set": _dports
-            }
-          }
-        },
-        {
-          "match": {
-            "op": "in",
-            "left": {
-              "ct": {
-                "key": "state"
-              }
-            },
-            "right": "new"
-          }
-        },
-        {
-          "drop": None
-        }
-      ]
+      "expr": _match_dict
     }}}
 
     json_command["nftables"].append(rule)
