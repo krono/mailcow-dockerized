@@ -1,5 +1,6 @@
 import iptc
 import time
+import os
 
 class IPTables:
   def __init__(self, chain_name, logger):

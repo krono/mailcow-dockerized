@@ -1,5 +1,6 @@
 import nftables
 import ipaddress
+import os
 
 class NFTables:
   def __init__(self, chain_name, logger):
@@ -583,11 +584,12 @@ class NFTables:
         "match": {
           "op": "==",
           "left": {
-            "ip": {
-              "key": "saddr"
+            "payload": {
+              "protocol": "ip",
+              "field": "saddr"
             }
           },
-          "right": os.getenv("MAILCOW_REPLICA")
+          "right": os.getenv("MAILCOW_REPLICA_IP")
         }
       },
       {
