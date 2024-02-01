@@ -246,6 +246,8 @@ services:
       environment:
         - DOVECOT_MASTER_USER=${DOVECOT_MASTER_USER:-}
         - DOVECOT_MASTER_PASS=${DOVECOT_MASTER_PASS:-}
+        - MAILCOW_REPLICA_IP=${MAILCOW_REPLICA_IP:-}
+        - DOVEADM_REPLICA_PORT=${DOVEADM_REPLICA_PORT:-}
         - LOG_LINES=${LOG_LINES:-9999}
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
@@ -451,6 +453,7 @@ services:
         - SNAT6_TO_SOURCE=${SNAT6_TO_SOURCE:-n}
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
+        - MAILCOW_REPLICA_IP=${MAILCOW_REPLICA_IP:-}
       network_mode: "host"
       volumes:
         - /lib/modules:/lib/modules:ro

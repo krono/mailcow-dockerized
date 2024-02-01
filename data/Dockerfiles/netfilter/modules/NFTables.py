@@ -509,14 +509,20 @@ class NFTables:
     family = "ip"
     table = "filter"
     chain_name = "MAILCOW"
-    comment_filter = "mailcow isolation"
+    comment_filter_drop = "mailcow isolation"
+    comment_filter_allow = "mailcow isolation allow"
     json_command = self.get_base_dict()
 
-    handles = self.get_rules_handle(family, table, chain_name, comment_filter)
+    # Delete old mailcow isolation rules
+    handles = self.get_rules_handle(family, table, chain_name, comment_filter_drop)
+    for handle in handles:
+      self.delete_filter_rule(family, chain_name, handle)
+    handles = self.get_rules_handle(family, table, chain_name, comment_filter_allow)
     for handle in handles:
       self.delete_filter_rule(family, chain_name, handle)
 
-    _match_dict = [
+    # insert mailcow isolation rule
+    _match_dict_drop = [
       {
         "match": {
           "op": "!=",
@@ -563,16 +569,83 @@ class NFTables:
         "drop": None
       }
     ]
-
-    rule = { "insert": { "rule": {
+    rule_drop = { "insert": { "rule": {
       "family": family,
       "table": table,
       "chain": chain_name,
-      "comment": comment_filter,
-      "expr": _match_dict
+      "comment": comment_filter_drop,
+      "expr": _match_dict_drop
     }}}
 
-    json_command["nftables"].append(rule)
+    # insert mailcow isolation exception rule
+    _match_dict_allow = [
+      {
+        "match": {
+          "op": "==",
+          "left": {
+            "ip": {
+              "key": "saddr"
+            }
+          },
+          "right": os.getenv("MAILCOW_REPLICA")
+        }
+      },
+      {
+        "match": {
+          "op": "!=",
+          "left": {
+            "meta": {
+              "key": "iifname"
+            }
+          },
+          "right": _interface
+        }
+      },
+      {
+        "match": {
+          "op": "==",
+          "left": {
+            "meta": {
+              "key": "oifname"
+            }
+          },
+          "right": _interface
+        }
+      },
+      {
+        "match": {
+          "op": "==",
+          "left": {
+            "payload": {
+              "protocol": "tcp",
+              "field": "dport"
+            }
+          },
+          "right": {
+            "set": _dports
+          }
+        }
+      },
+      {
+        "counter": {
+          "packets": 0,
+          "bytes": 0
+        }
+      },
+      {
+        "accept": None
+      }
+    ]
+    rule_allow = { "insert": { "rule": {
+      "family": family,
+      "table": table,
+      "chain": chain_name,
+      "comment": comment_filter_allow,
+      "expr": _match_dict_allow
+    }}}
+
+    json_command["nftables"].append(rule_drop)
+    json_command["nftables"].append(rule_allow)
     success = self.nft_exec_dict(json_command)
     if success == False:
       self.logger.logCrit(f"Error adding MAILCOW isolation")

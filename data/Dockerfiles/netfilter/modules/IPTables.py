@@ -215,16 +215,34 @@ class IPTables:
   def create_docker_user_rule(self, _interface:str, _dports:list):
     try:
       chain = iptc.Chain(iptc.Table(iptc.Table.FILTER), 'MAILCOW')
+
+      # insert mailcow isolation rule
       rule = iptc.Rule()
       rule.in_interface = f'! {_interface}'
       rule.out_interface = _interface
+      rule.protocol = 'tcp'
       rule.create_target("DROP")
       match = rule.create_match("multiport")
       match.dports = ','.join(map(str, _dports))
 
       if rule in chain.rules:
-        return False
+        chain.delete_rule(rule)
       chain.insert_rule(rule, position=0)
+
+      # insert mailcow isolation exception rule
+      rule = iptc.Rule()
+      rule_allow.src = os.getenv("MAILCOW_REPLICA_IP")
+      rule.in_interface = f'! {_interface}'
+      rule.out_interface = _interface
+      rule.protocol = 'tcp'
+      rule.create_target("ACCEPT")
+      match = rule.create_match("multiport")
+      match.dports = ','.join(map(str, _dports))
+
+      if rule in chain.rules:
+        chain.delete_rule(rule)
+      chain.insert_rule(rule, position=0)
+
 
       return True
     except Exception as e:
